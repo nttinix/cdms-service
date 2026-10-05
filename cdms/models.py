@@ -1,5 +1,6 @@
 import hashlib
 import json
+import math
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -39,6 +40,13 @@ class BusinessProduct(BaseModel):
 class Product(BusinessProduct):
     product_id: int = Field(alias="productId", ge=1, le=9_223_372_036_854_775_807)
     source_version: int = Field(alias="sourceVersion", ge=1, le=9_223_372_036_854_775_807)
+
+    @field_validator("product_id", "source_version", mode="before")
+    @classmethod
+    def normalize_excel_integer(cls, value: Any) -> Any:
+        if isinstance(value, float) and math.isfinite(value) and value.is_integer():
+            return int(value)
+        return value
 
     def business_data(self) -> dict[str, Any]:
         return self.model_dump(by_alias=True, exclude={"source_version"})
