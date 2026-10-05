@@ -39,6 +39,16 @@ services:
       retries: 20
     restart: unless-stopped
 
+  cdms:
+    <<: *app
+    ports:
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready',timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
   emulator:
     <<: *app
     command: ["uvicorn", "cdms.emulator:create_app", "--factory", "--host", "0.0.0.0", "--port", "8001"]
@@ -49,6 +59,17 @@ services:
       interval: 5s
       timeout: 3s
       retries: 12
+
+  worker:
+    <<: *app
+    command: ["python", "-m", "cdms.worker"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      cdms:
+        condition: service_healthy
+      emulator:
+        condition: service_healthy
 
 volumes:
   postgres-data:
