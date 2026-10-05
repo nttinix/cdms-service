@@ -1,0 +1,43 @@
+name: cdms-prototype
+
+x-app: &app
+  build: .
+  image: cdms-prototype:local
+  environment: &environment
+    DATABASE_URL: postgresql://cdms:${POSTGRES_PASSWORD:-cdms}@postgres:5432/cdms
+    SOURCE_URL: http://emulator:8001
+    CALLBACK_URL: http://cdms:8000/api/v1/webhooks/products
+    CDMS_URL: http://cdms:8000
+    API_TOKEN: ${API_TOKEN:-local-demo-token}
+    POLL_INTERVAL: ${POLL_INTERVAL:-10}
+    PAGE_SIZE: ${PAGE_SIZE:-100}
+    HTTP_TIMEOUT: ${HTTP_TIMEOUT:-5}
+    RETRY_BASE: ${RETRY_BASE:-1}
+    RETRY_CAP: ${RETRY_CAP:-30}
+    MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-10485760}
+    MAX_EXCEL_ROWS: ${MAX_EXCEL_ROWS:-10000}
+  restart: unless-stopped
+  depends_on:
+    postgres:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: cdms
+      POSTGRES_USER: cdms
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cdms}
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cdms -d cdms"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
